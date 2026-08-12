@@ -24,6 +24,15 @@ export function normalizeCode(input: string): string | null {
   return `PLS-${s.slice(0, 4)}-${s.slice(4, 8)}`;
 }
 
+// Format a code as the user types it, inserting the dashes of PLS-XXXX-XXXX.
+// The raw input is uppercased and stripped of non-alphanumerics, then grouped
+// as 3 + 4 + 4. Whatever comes out still normalizes correctly on the server.
+export function formatCodeInput(raw: string): string {
+  const s = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+  const groups = [s.slice(0, 3), s.slice(3, 7), s.slice(7, 11)].filter(Boolean);
+  return groups.join("-");
+}
+
 // Mask a code for display so the full value is never exposed. Reveals the
 // prefix and the last group only: "PLS-••••-M9TX".
 export function maskCode(code: string | null): string | null {

@@ -92,6 +92,7 @@ export function PublicRegistration(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<RegisterResult | null>(null);
   const venueName = locationLabel || venue || "the venue";
 
@@ -189,6 +190,17 @@ export function PublicRegistration(props: Props) {
               >
                 {result.code}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(result.code ?? "");
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="btn-outline mt-3"
+              >
+                {copied ? "Copied ✓" : "Copy code"}
+              </button>
             </div>
           )}
 

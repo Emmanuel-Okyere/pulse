@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api, ApiError } from "@/lib/apiClient";
+import { formatCodeInput } from "@/lib/codes";
 
 type Registration = {
   codeMasked: string | null;
@@ -100,14 +101,15 @@ export function RedeemPanel({ eventId }: { eventId: string }) {
         </h3>
         <p className="text-sm text-ink-muted">
           Enter the attendee’s registration code to confirm attendance and
-          release their benefit. Dashes are optional.
+          release their benefit. The dashes fill in as you type.
         </p>
         <form onSubmit={find} className="mt-4 flex gap-2">
           <input
             className="input font-mono uppercase tracking-wider"
-            placeholder="PLSXXXXXXXX"
+            placeholder="PLS-XXXX-XXXX"
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onChange={(e) => setCode(formatCodeInput(e.target.value))}
+            maxLength={13}
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}

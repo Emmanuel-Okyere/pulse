@@ -4,7 +4,22 @@ import {
   slugify,
   normalizeCode,
   maskCode,
+  formatCodeInput,
 } from "@/lib/codes";
+
+describe("formatCodeInput", () => {
+  it("inserts the dashes as the code is typed", () => {
+    expect(formatCodeInput("PLS")).toBe("PLS");
+    expect(formatCodeInput("PLSU2")).toBe("PLS-U2");
+    expect(formatCodeInput("PLSU2UCM9TX")).toBe("PLS-U2UC-M9TX");
+  });
+  it("cleans lower case, spaces and stray dashes", () => {
+    expect(formatCodeInput("pls u2uc-m9tx")).toBe("PLS-U2UC-M9TX");
+  });
+  it("caps at the code length", () => {
+    expect(formatCodeInput("PLSU2UCM9TXEXTRA")).toBe("PLS-U2UC-M9TX");
+  });
+});
 
 describe("normalizeCode", () => {
   it("accepts the canonical form", () => {
