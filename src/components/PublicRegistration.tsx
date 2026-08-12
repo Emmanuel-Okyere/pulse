@@ -16,6 +16,10 @@ type Props = {
   benefits: Benefit[];
   themePrimary: string | null;
   themeAccent: string | null;
+  requireLocation: boolean;
+  enforceLocation: boolean;
+  locationLabel: string | null;
+  checkinToken: string | null;
 };
 
 type RegisterResult = {
@@ -23,7 +27,31 @@ type RegisterResult = {
   codesEnabled: boolean;
   confirmationTitle: string | null;
   confirmationMessage: string | null;
+  atVenue: boolean | null;
+  smsSent: boolean;
 };
+
+type Coords = { lat: number; lng: number; accuracy?: number };
+
+// Ask the browser for the current position, resolving with plain coordinates.
+function getPosition(): Promise<Coords> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not available on this device."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) =>
+        resolve({
+          lat: p.coords.latitude,
+          lng: p.coords.longitude,
+          accuracy: p.coords.accuracy,
+        }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
 
 export function PublicRegistration(props: Props) {
   const {
@@ -37,6 +65,10 @@ export function PublicRegistration(props: Props) {
     benefits,
     themePrimary,
     themeAccent,
+    requireLocation,
+    enforceLocation,
+    locationLabel,
+    checkinToken,
   } = props;
 
   // When the organizer set custom colours, override the key brand elements with
@@ -59,7 +91,9 @@ export function PublicRegistration(props: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [result, setResult] = useState<RegisterResult | null>(null);
+  const venueName = locationLabel || venue || "the venue";
 
   // Format the start time on the client only. toLocaleString() depends on the
   // machine's locale and time zone, so running it during SSR and again on the
@@ -77,9 +111,28 @@ export function PublicRegistration(props: Props) {
     setFieldErrors({});
     setBusy(true);
     try {
+      // Capture the attendee's location when the event verifies presence.
+      let location: Coords | undefined;
+      if (requireLocation) {
+        setLocating(true);
+        try {
+          location = await getPosition();
+        } catch {
+          if (enforceLocation) {
+            setError(
+              `${venueName} requires your location to register. Please allow location access and try again.`
+            );
+            setBusy(false);
+            return;
+          }
+          // Soft mode: register anyway; the organiser will see it as off-site.
+        } finally {
+          setLocating(false);
+        }
+      }
       const res = await api<RegisterResult>(`/api/public/${slug}/register`, {
         method: "POST",
-        body: JSON.stringify({ values }),
+        body: JSON.stringify({ values, location, token: checkinToken ?? undefined }),
       });
       setResult(res);
     } catch (err) {
@@ -227,6 +280,17 @@ export function PublicRegistration(props: Props) {
 
       {/* Form */}
       <form onSubmit={submit} className="space-y-4 p-6">
+        {requireLocation && (
+          <div className="flex items-start gap-2 rounded-xl bg-neutralbg px-3.5 py-2.5 text-xs text-ink-muted">
+            <span aria-hidden>📍</span>
+            <span>
+              {enforceLocation
+                ? `You must be at ${venueName} to register — you’ll be asked to share your location.`
+                : `This event checks attendance by location. You’ll be asked to share your location; you can still register if you decline.`}
+            </span>
+          </div>
+        )}
+
         {fields.map((f) => (
           <Field
             key={f.key}
@@ -248,7 +312,11 @@ export function PublicRegistration(props: Props) {
           style={st.solid}
           disabled={busy}
         >
-          {busy ? "Registering…" : "Register my attendance"}
+          {locating
+            ? "Checking your location…"
+            : busy
+              ? "Registering…"
+              : "Register my attendance"}
         </button>
         <p className="text-center text-xs text-ink-muted">
           By registering you confirm your presence at this event.

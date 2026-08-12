@@ -21,6 +21,14 @@ const updateSchema = z.object({
   themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   embedLogoInQr: z.boolean().optional(),
+  requireLocation: z.boolean().optional(),
+  enforceLocation: z.boolean().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  radiusMeters: z.number().int().min(10).max(50000).optional(),
+  locationLabel: z.string().max(200).nullable().optional(),
+  smsEnabled: z.boolean().optional(),
+  secureCheckin: z.boolean().optional(),
 });
 
 type Params = { params: { id: string } };

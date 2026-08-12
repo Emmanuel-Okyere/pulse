@@ -12,7 +12,16 @@ type Registration = {
   redeemedAt: string | null;
   redeemCount: number;
   createdAt: string;
+  atVenue: boolean | null;
+  distanceMeters: number | null;
 };
+
+// Turn the stored presence flag into a short label for tables and exports.
+function presenceLabel(r: Registration): string {
+  if (r.atVenue === true) return "On-site";
+  if (r.atVenue === false) return "Off-site";
+  return "Unknown";
+}
 
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString() : "";
@@ -25,13 +34,19 @@ export function RegistrationsPanel({
   fields: FormField[];
 }) {
   const [rows, setRows] = useState<Registration[]>([]);
+  const [requireLocation, setRequireLocation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    api<{ registrations: Registration[] }>(`/api/events/${eventId}/registrations`)
-      .then((r) => setRows(r.registrations))
+    api<{ registrations: Registration[]; requireLocation: boolean }>(
+      `/api/events/${eventId}/registrations`
+    )
+      .then((r) => {
+        setRows(r.registrations);
+        setRequireLocation(r.requireLocation);
+      })
       .finally(() => setLoading(false));
   }, [eventId]);
 
@@ -55,6 +70,7 @@ export function RegistrationsPanel({
       "redeemed",
       "redeem_count",
       "redeemed_at",
+      ...(requireLocation ? ["presence", "distance_m"] : []),
       ...fields.map((f) => f.label),
     ];
     const data = filtered.map((r) => [
@@ -63,6 +79,9 @@ export function RegistrationsPanel({
       r.redeemed ? "yes" : "no",
       String(r.redeemCount),
       fmt(r.redeemedAt),
+      ...(requireLocation
+        ? [presenceLabel(r), r.distanceMeters != null ? String(r.distanceMeters) : ""]
+        : []),
       ...fields.map((f) => r.data[f.key] ?? ""),
     ]);
     return { headers, data };
@@ -165,6 +184,11 @@ export function RegistrationsPanel({
                     {f.label}
                   </th>
                 ))}
+                {requireLocation && (
+                  <th className="px-4 py-3 font-mono text-xs uppercase text-ink-muted">
+                    Presence
+                  </th>
+                )}
                 <th className="px-4 py-3 font-mono text-xs uppercase text-ink-muted">
                   Registered
                 </th>
@@ -187,6 +211,11 @@ export function RegistrationsPanel({
                       {r.data[f.key] || <span className="text-gray-300">—</span>}
                     </td>
                   ))}
+                  {requireLocation && (
+                    <td className="whitespace-nowrap px-4 py-3 text-xs">
+                      <PresenceBadge r={r} />
+                    </td>
+                  )}
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-muted">
                     {fmt(r.createdAt)}
                   </td>
@@ -210,6 +239,24 @@ export function RegistrationsPanel({
       )}
     </div>
   );
+}
+
+// On-site / off-site / unknown badge with the measured distance.
+function PresenceBadge({ r }: { r: Registration }) {
+  const dist = r.distanceMeters != null ? ` · ${r.distanceMeters} m` : "";
+  if (r.atVenue === true) {
+    return (
+      <span className="chip bg-secondary-50 text-secondary-800">
+        on-site{dist}
+      </span>
+    );
+  }
+  if (r.atVenue === false) {
+    return (
+      <span className="chip bg-amber-100 text-amber-800">off-site{dist}</span>
+    );
+  }
+  return <span className="chip bg-gray-100 text-gray-500">unknown</span>;
 }
 
 // Escape a value for CSV output.

@@ -67,6 +67,24 @@ model Event {
   // Whether the organizer's logo is painted into the centre of the QR code.
   embedLogoInQr Boolean @default(true)
 
+  // Geofenced presence check. When requireLocation is on, attendees are asked
+  // to share their location and each registration is flagged on-site/off-site.
+  // enforceLocation additionally blocks registration from outside the geofence;
+  // when it is off (the default), off-site people can still register.
+  requireLocation Boolean @default(false)
+  enforceLocation Boolean @default(false)
+  latitude        Float?
+  longitude       Float?
+  radiusMeters    Int     @default(200)
+  locationLabel   String? // human-readable place name for the attendee prompt
+
+  // Send the registration code to the attendee by SMS (GiantSMS) when possible.
+  smsEnabled Boolean @default(false)
+
+  // Secure check-in: registration requires a short-lived signed token from the
+  // live entrance display, so a screenshotted or forwarded QR cannot be reused.
+  secureCheckin Boolean @default(false)
+
   organizerId String
   organizer   User     @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
 
@@ -114,6 +132,12 @@ model Registration {
   redeemedAt   DateTime? // time of the most recent redemption
   redeemCount  Int      @default(0) // how many times it has been redeemed
 
+  // Presence at registration. atVenue: true = inside the geofence, false =
+  // outside, null = location not shared or not checked. distanceMeters is the
+  // measured distance from the venue centre when a location was shared.
+  atVenue        Boolean?
+  distanceMeters Int?
+
   createdAt    DateTime @default(now())
 
   @@index([eventId])
@@ -131,4 +155,14 @@ model ScanEvent {
 
   @@index([eventId])
   @@index([createdAt])
+}
+
+// Fixed-window rate-limit counters, shared across serverless instances. One row
+// per (action, client, time-window); expired rows are pruned opportunistically.
+model RateLimit {
+  key       String   @id // e.g. "register:1.2.3.4:29384756"
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

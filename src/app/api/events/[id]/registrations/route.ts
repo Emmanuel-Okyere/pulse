@@ -22,6 +22,8 @@ export async function GET(_req: Request, { params }: Params) {
         redeemedAt: true,
         redeemCount: true,
         createdAt: true,
+        atVenue: true,
+        distanceMeters: true,
       },
     });
 
@@ -33,8 +35,14 @@ export async function GET(_req: Request, { params }: Params) {
       redeemedAt: r.redeemedAt,
       redeemCount: r.redeemCount,
       createdAt: r.createdAt,
+      atVenue: r.atVenue,
+      distanceMeters: r.distanceMeters,
     }));
 
-    return { registrations, formSchema: event.formSchema };
+    return {
+      registrations,
+      formSchema: event.formSchema,
+      requireLocation: event.requireLocation,
+    };
   });
 }

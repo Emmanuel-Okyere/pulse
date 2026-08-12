@@ -21,6 +21,7 @@ type EventData = {
   organizerName: string;
   codesEnabled: boolean;
   embedLogoInQr: boolean;
+  secureCheckin: boolean;
   fields: FormField[];
   benefits: Benefit[];
   managers: { id: string; name: string; email: string }[];
@@ -238,34 +239,49 @@ function Overview({
           Registration QR
         </h3>
         <p className="mb-4 text-sm text-ink-muted">
-          Print this and place it at your entrance. Each scan opens the form.
+          {event.secureCheckin
+            ? "Secure check-in is on. Open the live display on a screen at your entrance — the code below is disabled."
+            : "Print this and place it at your entrance. Each scan opens the form."}
         </p>
+        {event.secureCheckin && (
+          <Link
+            href={`/checkin/${event.id}`}
+            target="_blank"
+            className="btn-primary mb-4 w-full"
+          >
+            ▶ Open live check-in display
+          </Link>
+        )}
         {status === "DRAFT" ? (
           <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Publish the event to activate this QR code for attendees.
           </div>
         ) : null}
-        <div className={status === "DRAFT" ? "mt-4 opacity-60" : "mt-4"}>
-          <QrPoster
-            url={registrationUrl}
-            logoData={event.logoData}
-            title={event.title}
-            embedLogo={event.embedLogoInQr}
-          />
-        </div>
-        <div className="mt-4">
-          <label className="label">Registration link</label>
-          <div className="mt-1.5 flex gap-2">
-            <input
-              readOnly
-              value={registrationUrl}
-              className="input font-mono text-xs"
-            />
-            <button onClick={copyLink} className="btn-outline shrink-0">
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-        </div>
+        {!event.secureCheckin && (
+          <>
+            <div className={status === "DRAFT" ? "mt-4 opacity-60" : "mt-4"}>
+              <QrPoster
+                url={registrationUrl}
+                logoData={event.logoData}
+                title={event.title}
+                embedLogo={event.embedLogoInQr}
+              />
+            </div>
+            <div className="mt-4">
+              <label className="label">Registration link</label>
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  readOnly
+                  value={registrationUrl}
+                  className="input font-mono text-xs"
+                />
+                <button onClick={copyLink} className="btn-outline shrink-0">
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Form + benefits summary */}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, signToken, setSessionCookie } from "@/lib/auth";
 import { handle } from "@/lib/http";
 import { HttpError } from "@/lib/guards";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -11,6 +12,9 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   return handle(async () => {
+    // Throttle password guessing per client IP.
+    await rateLimit("login", clientIp(req), 10);
+
     const body = schema.parse(await req.json());
     const user = await prisma.user.findUnique({
       where: { email: body.email.toLowerCase() },

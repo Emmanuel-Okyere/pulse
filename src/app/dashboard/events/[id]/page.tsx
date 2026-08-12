@@ -51,6 +51,7 @@ export default async function EventDetailPage({
           organizerName: event.organizer.name,
           codesEnabled: event.codesEnabled,
           embedLogoInQr: event.embedLogoInQr,
+          secureCheckin: event.secureCheckin,
           fields: (event.formSchema as unknown as FormField[]) ?? [],
           benefits: (event.benefits as unknown as Benefit[]) ?? [],
           managers: event.managers.map((m) => ({

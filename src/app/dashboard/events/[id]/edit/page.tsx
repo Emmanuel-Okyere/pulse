@@ -59,6 +59,14 @@ export default async function EditEventPage({
     themePrimary: event.themePrimary ?? "",
     themeAccent: event.themeAccent ?? "",
     embedLogoInQr: event.embedLogoInQr,
+    requireLocation: event.requireLocation,
+    enforceLocation: event.enforceLocation,
+    latitude: event.latitude,
+    longitude: event.longitude,
+    radiusMeters: event.radiusMeters,
+    locationLabel: event.locationLabel ?? "",
+    smsEnabled: event.smsEnabled,
+    secureCheckin: event.secureCheckin,
   };
 
   return (

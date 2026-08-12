@@ -33,6 +33,14 @@ export type EventEditorInitial = {
   themePrimary: string; // "" = use default
   themeAccent: string; // "" = use default
   embedLogoInQr: boolean;
+  requireLocation: boolean;
+  enforceLocation: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+  locationLabel: string;
+  smsEnabled: boolean;
+  secureCheckin: boolean;
 };
 
 const rid = () => Math.random().toString(36).slice(2, 9);
@@ -60,6 +68,14 @@ export function emptyInitial(): EventEditorInitial {
     themePrimary: "",
     themeAccent: "",
     embedLogoInQr: true,
+    requireLocation: false,
+    enforceLocation: false,
+    latitude: null,
+    longitude: null,
+    radiusMeters: 200,
+    locationLabel: "",
+    smsEnabled: false,
+    secureCheckin: false,
   };
 }
 
@@ -99,8 +115,58 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
   const [customColors, setCustomColors] = useState(Boolean(seed.themePrimary));
   const [themePrimary, setThemePrimary] = useState(seed.themePrimary || DEFAULT_PRIMARY);
   const [themeAccent, setThemeAccent] = useState(seed.themeAccent || DEFAULT_ACCENT);
+  const [smsEnabled, setSmsEnabled] = useState(seed.smsEnabled);
+  const [requireLocation, setRequireLocation] = useState(seed.requireLocation);
+  const [enforceLocation, setEnforceLocation] = useState(seed.enforceLocation);
+  const [latStr, setLatStr] = useState(seed.latitude?.toString() ?? "");
+  const [lngStr, setLngStr] = useState(seed.longitude?.toString() ?? "");
+  const [radiusMeters, setRadiusMeters] = useState(seed.radiusMeters);
+  const [locationLabel, setLocationLabel] = useState(seed.locationLabel);
+  const [secureCheckin, setSecureCheckin] = useState(seed.secureCheckin);
+  const [addressQuery, setAddressQuery] = useState("");
+  const [geoBusy, setGeoBusy] = useState<null | "current" | "address">(null);
+  const [locError, setLocError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function useMyLocation() {
+    setLocError(null);
+    if (!navigator.geolocation) {
+      setLocError("Geolocation is not available in this browser.");
+      return;
+    }
+    setGeoBusy("current");
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setLatStr(p.coords.latitude.toFixed(6));
+        setLngStr(p.coords.longitude.toFixed(6));
+        setGeoBusy(null);
+      },
+      () => {
+        setLocError("Could not read your location. Allow access or enter it manually.");
+        setGeoBusy(null);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  async function findAddress() {
+    if (!addressQuery.trim()) return;
+    setLocError(null);
+    setGeoBusy("address");
+    try {
+      const res = await api<{ lat: number; lng: number; label: string }>(
+        `/api/geocode?q=${encodeURIComponent(addressQuery.trim())}`
+      );
+      setLatStr(res.lat.toFixed(6));
+      setLngStr(res.lng.toFixed(6));
+      if (!locationLabel.trim()) setLocationLabel(res.label.split(",").slice(0, 2).join(", "));
+    } catch (err) {
+      setLocError(err instanceof ApiError ? err.message : "Address lookup failed.");
+    } finally {
+      setGeoBusy(null);
+    }
+  }
 
   function addField() {
     setFields((f) => [
@@ -184,6 +250,14 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
       // null → the public page falls back to the built-in Kinetic Pulse theme.
       themePrimary: customColors ? themePrimary : null,
       themeAccent: customColors ? themeAccent : null,
+      smsEnabled,
+      requireLocation,
+      enforceLocation: requireLocation && enforceLocation,
+      latitude: latStr.trim() ? Number(latStr) : null,
+      longitude: lngStr.trim() ? Number(lngStr) : null,
+      radiusMeters: Math.max(10, radiusMeters),
+      locationLabel: locationLabel.trim() || null,
+      secureCheckin,
     };
   }
 
@@ -195,6 +269,14 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
     }
     if (fields.filter((f) => f.label.trim()).length === 0) {
       setError("Add at least one field to your registration form.");
+      return;
+    }
+    if (requireLocation && (!latStr.trim() || !lngStr.trim())) {
+      setError("Set the venue location, or turn off location verification.");
+      return;
+    }
+    if (smsEnabled && !fields.some((f) => f.type === "phone")) {
+      setError("Add a phone field to your form so codes can be sent by SMS.");
       return;
     }
     setBusy(true);
@@ -566,6 +648,26 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
               Leave either blank to use the default shown in grey.
             </p>
           </div>
+
+          {codesEnabled && (
+            <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-neutralbg p-4">
+              <input
+                type="checkbox"
+                checked={smsEnabled}
+                onChange={(e) => setSmsEnabled(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink">
+                  Text the code to attendees by SMS
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-muted">
+                  Needs a phone field on your form. Sent through GiantSMS to
+                  Ghanaian numbers on registration.
+                </span>
+              </span>
+            </label>
+          )}
         </section>
 
         {/* Branding — registration page colours */}
@@ -633,6 +735,172 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Location & presence */}
+        <section className="card p-6">
+          <h2 className="font-heading text-lg font-bold text-ink">
+            Location &amp; presence
+          </h2>
+          <p className="text-sm text-ink-muted">
+            Ask attendees to share their location so you can see who was actually
+            at the venue.
+          </p>
+
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-neutralbg p-4">
+            <input
+              type="checkbox"
+              checked={requireLocation}
+              onChange={(e) => setRequireLocation(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-ink">
+                Verify attendee location
+              </span>
+              <span className="mt-0.5 block text-xs text-ink-muted">
+                Each registration is flagged on-site or off-site based on the
+                attendee&rsquo;s distance from the venue.
+              </span>
+            </span>
+          </label>
+
+          {requireLocation && (
+            <div className="mt-4 space-y-4 rounded-xl border border-[var(--border)] p-4">
+              <div>
+                <label className="label">Set the venue location</label>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={useMyLocation}
+                    disabled={geoBusy !== null}
+                    className="btn-outline"
+                  >
+                    {geoBusy === "current" ? "Locating…" : "📍 Use my current location"}
+                  </button>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    className="input"
+                    placeholder="…or search an address / place"
+                    value={addressQuery}
+                    onChange={(e) => setAddressQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        findAddress();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={findAddress}
+                    disabled={geoBusy !== null || !addressQuery.trim()}
+                    className="btn-outline shrink-0"
+                  >
+                    {geoBusy === "address" ? "Finding…" : "Find"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="label">Latitude</label>
+                  <input
+                    className="input mt-1.5 font-mono"
+                    value={latStr}
+                    onChange={(e) => setLatStr(e.target.value)}
+                    placeholder="5.6037"
+                  />
+                </div>
+                <div>
+                  <label className="label">Longitude</label>
+                  <input
+                    className="input mt-1.5 font-mono"
+                    value={lngStr}
+                    onChange={(e) => setLngStr(e.target.value)}
+                    placeholder="-0.1870"
+                  />
+                </div>
+                <div>
+                  <label className="label">Radius (m)</label>
+                  <input
+                    type="number"
+                    min={10}
+                    className="input mt-1.5"
+                    value={radiusMeters}
+                    onChange={(e) => setRadiusMeters(Number(e.target.value) || 200)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Place name (shown to attendees)</label>
+                <input
+                  className="input mt-1.5"
+                  value={locationLabel}
+                  onChange={(e) => setLocationLabel(e.target.value)}
+                  placeholder="Accra Digital Centre"
+                />
+              </div>
+
+              {latStr.trim() && lngStr.trim() && (
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lngStr}#map=17/${latStr}/${lngStr}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block text-xs font-semibold text-primary"
+                >
+                  Preview on map ↗
+                </a>
+              )}
+
+              <label className="flex items-start gap-3 border-t border-[var(--border)] pt-4">
+                <input
+                  type="checkbox"
+                  checked={enforceLocation}
+                  onChange={(e) => setEnforceLocation(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ink">
+                    Only allow registration at the venue
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">
+                    Off by default: people can still register from anywhere and
+                    the list shows who was on-site. On: off-site people are
+                    turned away.
+                  </span>
+                </span>
+              </label>
+
+              {locError && (
+                <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+                  {locError}
+                </div>
+              )}
+            </div>
+          )}
+
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-neutralbg p-4">
+            <input
+              type="checkbox"
+              checked={secureCheckin}
+              onChange={(e) => setSecureCheckin(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-ink">
+                Secure check-in (rotating QR)
+              </span>
+              <span className="mt-0.5 block text-xs text-ink-muted">
+                Registration only works from the live code on the entrance
+                screen, which refreshes every minute — a screenshotted or
+                forwarded code stops working. Open the live display from the
+                event page. Not for printed QR codes.
+              </span>
+            </span>
+          </label>
         </section>
       </div>
 

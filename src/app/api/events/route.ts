@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/guards";
+import { requireUser, HttpError } from "@/lib/guards";
 import { handle } from "@/lib/http";
 import { slugify } from "@/lib/codes";
 import { formSchemaArray, benefitsArray } from "@/lib/formSchema";
@@ -21,6 +21,14 @@ const createSchema = z.object({
   themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   embedLogoInQr: z.boolean().default(true),
+  requireLocation: z.boolean().default(false),
+  enforceLocation: z.boolean().default(false),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  radiusMeters: z.number().int().min(10).max(50000).default(200),
+  locationLabel: z.string().max(200).nullable().optional(),
+  smsEnabled: z.boolean().default(false),
+  secureCheckin: z.boolean().default(false),
 });
 
 // GET /api/events — list events visible to the current user.
@@ -57,6 +65,10 @@ export async function POST(req: Request) {
     const user = await requireUser();
     const body = createSchema.parse(await req.json());
 
+    if (body.requireLocation && (body.latitude == null || body.longitude == null)) {
+      throw new HttpError(422, "Set the venue location to verify attendance.");
+    }
+
     const event = await prisma.event.create({
       data: {
         title: body.title,
@@ -75,6 +87,14 @@ export async function POST(req: Request) {
         themePrimary: body.themePrimary,
         themeAccent: body.themeAccent,
         embedLogoInQr: body.embedLogoInQr,
+        requireLocation: body.requireLocation,
+        enforceLocation: body.enforceLocation,
+        latitude: body.latitude,
+        longitude: body.longitude,
+        radiusMeters: body.radiusMeters,
+        locationLabel: body.locationLabel,
+        smsEnabled: body.smsEnabled,
+        secureCheckin: body.secureCheckin,
         organizerId: user.id,
       },
     });
