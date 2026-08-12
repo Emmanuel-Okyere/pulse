@@ -1,0 +1,24 @@
+Student Name:       ____________________________
+Student ID:         ____________________________
+Project Title:      Pulse — Event Registration & Attendance Platform
+
+Live Application:   https://__________________________.vercel.app
+Admin URL:          https://__________________________.vercel.app/login  (sign in as admin)
+
+Test Username:      organizer@pulse.app
+Test Password:      Password123
+
+Admin Username:     admin@pulse.app
+Admin Password:     Password123
+
+Public sample event (no login needed):
+                    https://__________________________.vercel.app/r/founders-mixer-demo1
+
+Source Code Repository: https://github.com/____________________/event-registration-platform
+
+Notes for the examiner:
+- The seeded organizer and admin accounts above are created by `npm run seed`.
+- Attendees do not log in; they register through the public /r/<slug> page after
+  scanning the event QR code.
+- After registering, an attendee receives a code (format PLS-XXXX-XXXX). Staff
+  verify and redeem it under an event's "Redeem" tab.

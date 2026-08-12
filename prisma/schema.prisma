@@ -1,0 +1,122 @@
+// Prisma schema for the Event Registration Platform.
+// Data model notes live in the project documentation (System Design section).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN // platform-wide oversight, sees every event
+  ORGANIZER // owns events, full control over their own
+  MANAGER // assigned by an organizer to run registration on the ground
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ORGANIZER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  events       Event[]           @relation("OrganizerEvents")
+  assignments  EventManager[]
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  slug        String   @unique // used in the public registration URL
+  title       String
+  description String?
+  venue       String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  logoData    String?  // base64 data URL, embedded in the QR canvas
+  status      EventStatus @default(DRAFT)
+
+  // Dynamic registration form. Stored as an ordered array of field definitions.
+  // Each field: { key, label, type, required, options? }
+  formSchema  Json     @default("[]")
+
+  // Benefits attendees receive for registering (e.g. free airtime, popcorn).
+  benefits    Json     @default("[]")
+
+  // When true, each registration is issued a unique redeemable code. When false
+  // the event just captures attendance and no code is handed out.
+  codesEnabled Boolean @default(true)
+
+  // Optional custom confirmation shown to the attendee after registering.
+  // When null, a sensible default is used (which depends on codesEnabled).
+  confirmationTitle   String?
+  confirmationMessage String?
+
+  organizerId String
+  organizer   User     @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations Registration[]
+  scans         ScanEvent[]
+  managers      EventManager[]
+
+  @@index([organizerId])
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+// Join table letting an organizer delegate an event to other users.
+model EventManager {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model Registration {
+  id           String   @id @default(uuid())
+  // Human-friendly code handed to the attendee. Null when the event has codes
+  // disabled. Unique across all issued codes (Postgres permits multiple NULLs).
+  code         String?  @unique
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Answers to the dynamic form, keyed by field key.
+  data         Json
+
+  redeemed     Boolean  @default(false)
+  redeemedAt   DateTime?
+
+  createdAt    DateTime @default(now())
+
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+// One row per QR scan / registration-page view, used for analytics.
+model ScanEvent {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userAgent String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([createdAt])
+}
