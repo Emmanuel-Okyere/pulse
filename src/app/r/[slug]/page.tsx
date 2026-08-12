@@ -57,6 +57,8 @@ export default async function PublicEventPage({
             logoData={event.logoData}
             fields={(event.formSchema as unknown as FormField[]) ?? []}
             benefits={(event.benefits as unknown as Benefit[]) ?? []}
+            themePrimary={event.themePrimary}
+            themeAccent={event.themeAccent}
           />
         )}
       </div>

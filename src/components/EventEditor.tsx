@@ -29,9 +29,16 @@ export type EventEditorInitial = {
   codesEnabled: boolean;
   confirmationTitle: string;
   confirmationMessage: string;
+  maxRedemptions: number; // 1 single use, 0 unlimited, N up to N
+  themePrimary: string; // "" = use default
+  themeAccent: string; // "" = use default
+  embedLogoInQr: boolean;
 };
 
 const rid = () => Math.random().toString(36).slice(2, 9);
+
+export const DEFAULT_PRIMARY = "#5D3FD3";
+export const DEFAULT_ACCENT = "#00F5FF";
 
 export function emptyInitial(): EventEditorInitial {
   return {
@@ -49,6 +56,10 @@ export function emptyInitial(): EventEditorInitial {
     codesEnabled: true,
     confirmationTitle: "",
     confirmationMessage: "",
+    maxRedemptions: 1,
+    themePrimary: "",
+    themeAccent: "",
+    embedLogoInQr: true,
   };
 }
 
@@ -80,6 +91,14 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
   const [codesEnabled, setCodesEnabled] = useState(seed.codesEnabled);
   const [confirmationTitle, setConfirmationTitle] = useState(seed.confirmationTitle);
   const [confirmationMessage, setConfirmationMessage] = useState(seed.confirmationMessage);
+  const [redeemUnlimited, setRedeemUnlimited] = useState(seed.maxRedemptions === 0);
+  const [redeemTimes, setRedeemTimes] = useState(
+    seed.maxRedemptions === 0 ? 1 : seed.maxRedemptions
+  );
+  const [embedLogoInQr, setEmbedLogoInQr] = useState(seed.embedLogoInQr);
+  const [customColors, setCustomColors] = useState(Boolean(seed.themePrimary));
+  const [themePrimary, setThemePrimary] = useState(seed.themePrimary || DEFAULT_PRIMARY);
+  const [themeAccent, setThemeAccent] = useState(seed.themeAccent || DEFAULT_ACCENT);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -160,6 +179,11 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
       // null (not undefined) so editing can clear a previously set message.
       confirmationTitle: confirmationTitle.trim() || null,
       confirmationMessage: confirmationMessage.trim() || null,
+      maxRedemptions: redeemUnlimited ? 0 : Math.max(1, redeemTimes),
+      embedLogoInQr,
+      // null → the public page falls back to the built-in Kinetic Pulse theme.
+      themePrimary: customColors ? themePrimary : null,
+      themeAccent: customColors ? themeAccent : null,
     };
   }
 
@@ -232,13 +256,22 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
                 />
               </div>
               <div>
-                <label className="label">Logo (for the QR code)</label>
+                <label className="label">Logo</label>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/svg+xml"
                   onChange={onLogo}
                   className="mt-1.5 block w-full text-xs text-ink-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary"
                 />
+                <label className="mt-2 flex items-center gap-2 text-xs text-ink">
+                  <input
+                    type="checkbox"
+                    checked={embedLogoInQr}
+                    onChange={(e) => setEmbedLogoInQr(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  Embed this logo in the centre of the QR code
+                </label>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -464,6 +497,46 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
             </span>
           </label>
 
+          {codesEnabled && (
+            <div className="mt-4 rounded-xl border border-[var(--border)] p-4">
+              <label className="label">How many times can a code be redeemed?</label>
+              <div className="mt-2 flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={redeemUnlimited}
+                    onChange={(e) => setRedeemUnlimited(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Unlimited
+                </label>
+                {!redeemUnlimited && (
+                  <label className="flex items-center gap-2 text-sm text-ink">
+                    Up to
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000}
+                      value={redeemTimes}
+                      onChange={(e) =>
+                        setRedeemTimes(Math.max(1, Number(e.target.value) || 1))
+                      }
+                      className="input w-20 py-1.5 text-center"
+                    />
+                    time{redeemTimes === 1 ? "" : "s"}
+                  </label>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-ink-muted">
+                {redeemUnlimited
+                  ? "A code can be scanned and redeemed any number of times — useful for a recurring perk."
+                  : redeemTimes === 1
+                    ? "Single use: once a benefit is claimed, the code cannot be redeemed again."
+                    : `Each code can be redeemed up to ${redeemTimes} times.`}
+              </p>
+            </div>
+          )}
+
           <div className="mt-4">
             <label className="label">Confirmation headline</label>
             <input
@@ -493,6 +566,73 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
               Leave either blank to use the default shown in grey.
             </p>
           </div>
+        </section>
+
+        {/* Branding — registration page colours */}
+        <section className="card p-6">
+          <h2 className="font-heading text-lg font-bold text-ink">
+            Registration page colours
+          </h2>
+          <p className="text-sm text-ink-muted">
+            By default the page uses the Pulse violet. Pick your own colours to
+            match your brand.
+          </p>
+
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-neutralbg p-4">
+            <input
+              type="checkbox"
+              checked={customColors}
+              onChange={(e) => setCustomColors(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-ink">
+                Use custom colours
+              </span>
+              <span className="mt-0.5 block text-xs text-ink-muted">
+                Leave off to keep the default Kinetic Pulse theme.
+              </span>
+            </span>
+          </label>
+
+          {customColors && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="label">Primary</label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={themePrimary}
+                    onChange={(e) => setThemePrimary(e.target.value)}
+                    className="h-10 w-14 cursor-pointer rounded-lg border border-[var(--border)] bg-white p-1"
+                  />
+                  <input
+                    className="input font-mono uppercase"
+                    value={themePrimary}
+                    onChange={(e) => setThemePrimary(e.target.value)}
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">Accent</label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={themeAccent}
+                    onChange={(e) => setThemeAccent(e.target.value)}
+                    className="h-10 w-14 cursor-pointer rounded-lg border border-[var(--border)] bg-white p-1"
+                  />
+                  <input
+                    className="input font-mono uppercase"
+                    value={themeAccent}
+                    onChange={(e) => setThemeAccent(e.target.value)}
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 

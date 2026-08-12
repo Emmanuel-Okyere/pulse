@@ -17,6 +17,10 @@ const updateSchema = z.object({
   codesEnabled: z.boolean().optional(),
   confirmationTitle: z.string().max(120).nullable().optional(),
   confirmationMessage: z.string().max(500).nullable().optional(),
+  maxRedemptions: z.number().int().min(0).max(100000).optional(),
+  themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  embedLogoInQr: z.boolean().optional(),
 });
 
 type Params = { params: { id: string } };

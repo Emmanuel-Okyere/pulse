@@ -14,6 +14,8 @@ type Props = {
   logoData: string | null;
   fields: FormField[];
   benefits: Benefit[];
+  themePrimary: string | null;
+  themeAccent: string | null;
 };
 
 type RegisterResult = {
@@ -24,8 +26,34 @@ type RegisterResult = {
 };
 
 export function PublicRegistration(props: Props) {
-  const { slug, title, description, venue, startsAt, logoData, fields, benefits } =
-    props;
+  const {
+    slug,
+    title,
+    description,
+    venue,
+    startsAt,
+    logoData,
+    fields,
+    benefits,
+    themePrimary,
+    themeAccent,
+  } = props;
+
+  // When the organizer set custom colours, override the key brand elements with
+  // inline styles. Otherwise the built-in Kinetic Pulse classes render exactly
+  // as before, so the default page is untouched.
+  const custom = Boolean(themePrimary);
+  const primary = themePrimary || "#5D3FD3";
+  const accent = themeAccent || "#00F5FF";
+  const st = {
+    solid: custom ? { backgroundColor: primary } : undefined,
+    codeBox: custom
+      ? { backgroundColor: `${primary}14`, borderColor: `${primary}59`, color: primary }
+      : undefined,
+    avatar: custom ? { backgroundColor: `${primary}14`, color: primary } : undefined,
+    chip: custom ? { backgroundColor: `${accent}26`, color: primary } : undefined,
+    bullet: custom ? { color: primary } : undefined,
+  };
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -80,7 +108,10 @@ export function PublicRegistration(props: Props) {
 
     return (
       <div className="card overflow-hidden">
-        <div className="bg-primary px-6 py-8 text-center text-white">
+        <div
+          className={`px-6 py-8 text-center text-white${custom ? "" : " bg-primary"}`}
+          style={st.solid}
+        >
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 text-2xl">
             ✓
           </div>
@@ -89,9 +120,20 @@ export function PublicRegistration(props: Props) {
         </div>
         <div className="px-6 py-6">
           {hasCode && (
-            <div className="rounded-xl border border-dashed border-primary-200 bg-primary-50 px-4 py-5 text-center">
-              <div className="label text-primary-700">Your registration code</div>
-              <div className="mt-1 font-mono text-2xl font-bold tracking-wider text-primary">
+            <div
+              className={`rounded-xl border border-dashed px-4 py-5 text-center${
+                custom ? "" : " border-primary-200 bg-primary-50"
+              }`}
+              style={st.codeBox}
+            >
+              <div className={`label${custom ? "" : " text-primary-700"}`}>
+                Your registration code
+              </div>
+              <div
+                className={`mt-1 font-mono text-2xl font-bold tracking-wider${
+                  custom ? "" : " text-primary"
+                }`}
+              >
                 {result.code}
               </div>
             </div>
@@ -108,7 +150,12 @@ export function PublicRegistration(props: Props) {
                     key={i}
                     className="flex items-start gap-3 rounded-xl bg-neutralbg px-4 py-3"
                   >
-                    <span className="mt-0.5 text-secondary-700">◆</span>
+                    <span
+                      className={`mt-0.5${custom ? "" : " text-secondary-700"}`}
+                      style={st.bullet}
+                    >
+                      ◆
+                    </span>
                     <div>
                       <div className="font-semibold text-ink">{b.label}</div>
                       {b.detail && (
@@ -120,7 +167,7 @@ export function PublicRegistration(props: Props) {
               </ul>
               {hasCode && (
                 <p className="mt-3 text-xs text-ink-muted">
-                  Show your code to an event steward to redeem. It can be used once.
+                  Show your code to an event steward to redeem your benefit.
                 </p>
               )}
             </div>
@@ -143,7 +190,12 @@ export function PublicRegistration(props: Props) {
               className="h-14 w-14 rounded-xl object-cover"
             />
           ) : (
-            <div className="grid h-14 w-14 place-items-center rounded-xl bg-primary-50 font-heading text-2xl font-bold text-primary">
+            <div
+              className={`grid h-14 w-14 place-items-center rounded-xl font-heading text-2xl font-bold${
+                custom ? "" : " bg-primary-50 text-primary"
+              }`}
+              style={st.avatar}
+            >
               {title.charAt(0).toUpperCase()}
             </div>
           )}
@@ -161,7 +213,11 @@ export function PublicRegistration(props: Props) {
         {benefits.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {benefits.map((b, i) => (
-              <span key={i} className="chip bg-secondary-50 text-secondary-800">
+              <span
+                key={i}
+                className={`chip${custom ? "" : " bg-secondary-50 text-secondary-800"}`}
+                style={st.chip}
+              >
                 ◆ {b.label}
               </span>
             ))}
@@ -187,7 +243,11 @@ export function PublicRegistration(props: Props) {
           </div>
         )}
 
-        <button className="btn-primary w-full" disabled={busy}>
+        <button
+          className={`w-full${custom ? " btn text-white shadow-card" : " btn-primary"}`}
+          style={st.solid}
+          disabled={busy}
+        >
           {busy ? "Registering…" : "Register my attendance"}
         </button>
         <p className="text-center text-xs text-ink-muted">

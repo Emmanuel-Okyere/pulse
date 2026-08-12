@@ -50,6 +50,7 @@ export default async function EventDetailPage({
           logoData: event.logoData,
           organizerName: event.organizer.name,
           codesEnabled: event.codesEnabled,
+          embedLogoInQr: event.embedLogoInQr,
           fields: (event.formSchema as unknown as FormField[]) ?? [],
           benefits: (event.benefits as unknown as Benefit[]) ?? [],
           managers: event.managers.map((m) => ({

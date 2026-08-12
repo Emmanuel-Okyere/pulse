@@ -17,6 +17,10 @@ const createSchema = z.object({
   codesEnabled: z.boolean().default(true),
   confirmationTitle: z.string().max(120).nullable().optional(),
   confirmationMessage: z.string().max(500).nullable().optional(),
+  maxRedemptions: z.number().int().min(0).max(100000).default(1),
+  themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  embedLogoInQr: z.boolean().default(true),
 });
 
 // GET /api/events — list events visible to the current user.
@@ -67,6 +71,10 @@ export async function POST(req: Request) {
         codesEnabled: body.codesEnabled,
         confirmationTitle: body.confirmationTitle,
         confirmationMessage: body.confirmationMessage,
+        maxRedemptions: body.maxRedemptions,
+        themePrimary: body.themePrimary,
+        themeAccent: body.themeAccent,
+        embedLogoInQr: body.embedLogoInQr,
         organizerId: user.id,
       },
     });

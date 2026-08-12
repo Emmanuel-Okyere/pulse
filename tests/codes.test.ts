@@ -1,5 +1,38 @@
 import { describe, it, expect } from "vitest";
-import { generateRegistrationCode, slugify } from "@/lib/codes";
+import {
+  generateRegistrationCode,
+  slugify,
+  normalizeCode,
+  maskCode,
+} from "@/lib/codes";
+
+describe("normalizeCode", () => {
+  it("accepts the canonical form", () => {
+    expect(normalizeCode("PLS-U2UC-M9TX")).toBe("PLS-U2UC-M9TX");
+  });
+  it("accepts the code without dashes and in lower case", () => {
+    expect(normalizeCode("plsu2ucm9tx")).toBe("PLS-U2UC-M9TX");
+  });
+  it("accepts the eight-character body without the PLS prefix", () => {
+    expect(normalizeCode("u2uc m9tx")).toBe("PLS-U2UC-M9TX");
+  });
+  it("rejects the wrong length", () => {
+    expect(normalizeCode("PLS-U2UC")).toBeNull();
+  });
+  it("rejects characters outside the code alphabet", () => {
+    // 0, O, 1 and I are never used in codes.
+    expect(normalizeCode("PLS-0OI1-M9TX")).toBeNull();
+  });
+});
+
+describe("maskCode", () => {
+  it("reveals the prefix and last group only", () => {
+    expect(maskCode("PLS-U2UC-M9TX")).toBe("PLS-••••-M9TX");
+  });
+  it("passes null through", () => {
+    expect(maskCode(null)).toBeNull();
+  });
+});
 
 describe("generateRegistrationCode", () => {
   it("matches the PLS-XXXX-XXXX shape", () => {

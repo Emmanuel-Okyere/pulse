@@ -55,6 +55,10 @@ export default async function EditEventPage({
     codesEnabled: event.codesEnabled,
     confirmationTitle: event.confirmationTitle ?? "",
     confirmationMessage: event.confirmationMessage ?? "",
+    maxRedemptions: event.maxRedemptions,
+    themePrimary: event.themePrimary ?? "",
+    themeAccent: event.themeAccent ?? "",
+    embedLogoInQr: event.embedLogoInQr,
   };
 
   return (

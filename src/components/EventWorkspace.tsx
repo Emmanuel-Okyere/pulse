@@ -20,6 +20,7 @@ type EventData = {
   logoData: string | null;
   organizerName: string;
   codesEnabled: boolean;
+  embedLogoInQr: boolean;
   fields: FormField[];
   benefits: Benefit[];
   managers: { id: string; name: string; email: string }[];
@@ -249,6 +250,7 @@ function Overview({
             url={registrationUrl}
             logoData={event.logoData}
             title={event.title}
+            embedLogo={event.embedLogoInQr}
           />
         </div>
         <div className="mt-4">

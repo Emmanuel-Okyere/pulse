@@ -56,6 +56,17 @@ model Event {
   confirmationTitle   String?
   confirmationMessage String?
 
+  // How many times a single code may be redeemed. 1 = single use (default),
+  // 0 = unlimited, any other N = up to N times.
+  maxRedemptions Int @default(1)
+
+  // Registration-page branding. Null falls back to the Kinetic Pulse defaults.
+  themePrimary String? // hex, e.g. "#5D3FD3"
+  themeAccent  String? // hex, e.g. "#00F5FF"
+
+  // Whether the organizer's logo is painted into the centre of the QR code.
+  embedLogoInQr Boolean @default(true)
+
   organizerId String
   organizer   User     @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
 
@@ -100,7 +111,8 @@ model Registration {
   data         Json
 
   redeemed     Boolean  @default(false)
-  redeemedAt   DateTime?
+  redeemedAt   DateTime? // time of the most recent redemption
+  redeemCount  Int      @default(0) // how many times it has been redeemed
 
   createdAt    DateTime @default(now())
 

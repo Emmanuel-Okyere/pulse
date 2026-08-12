@@ -3,23 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 
-// Renders the event's registration URL as a QR code on a canvas, overlays the
-// organizer's logo in the centre, and offers a PNG download for printing.
+// Renders the event's registration URL as a QR code on a canvas, optionally
+// overlays the organizer's logo in the centre, and offers PNG and PDF downloads
+// for printing.
 export function QrPoster({
   url,
   logoData,
   title,
+  embedLogo = true,
 }: {
   url: string;
   logoData: string | null;
   title: string;
+  embedLogo?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const [makingPdf, setMakingPdf] = useState(false);
+
+  const showLogo = Boolean(logoData) && embedLogo;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    setReady(false);
 
     QRCode.toCanvas(
       canvas,
@@ -32,7 +39,7 @@ export function QrPoster({
       },
       (err) => {
         if (err) return;
-        if (!logoData) {
+        if (!showLogo) {
           setReady(true);
           return;
         }
@@ -52,18 +59,54 @@ export function QrPoster({
           setReady(true);
         };
         img.onerror = () => setReady(true);
-        img.src = logoData;
+        img.src = logoData as string;
       }
     );
-  }, [url, logoData]);
+  }, [url, logoData, showLogo]);
 
-  function download() {
+  const fileBase = title.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "event";
+
+  function downloadPng() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement("a");
-    link.download = `${title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-qr.png`;
+    link.download = `${fileBase}-qr.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
+  }
+
+  async function downloadPdf() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setMakingPdf(true);
+    try {
+      // Load jsPDF only when a PDF is actually requested.
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const qrSize = 320;
+      const x = (pageW - qrSize) / 2;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text(title, pageW / 2, 90, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor(110);
+      doc.text("Scan to register your attendance", pageW / 2, 116, {
+        align: "center",
+      });
+
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", x, 150, qrSize, qrSize);
+
+      doc.setTextColor(140);
+      doc.setFontSize(10);
+      doc.text(url, pageW / 2, 150 + qrSize + 28, { align: "center" });
+
+      doc.save(`${fileBase}-qr.pdf`);
+    } finally {
+      setMakingPdf(false);
+    }
   }
 
   return (
@@ -71,9 +114,18 @@ export function QrPoster({
       <div className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-card">
         <canvas ref={canvasRef} className="h-auto w-full max-w-[280px]" />
       </div>
-      <button onClick={download} disabled={!ready} className="btn-outline mt-4">
-        ↓ Download QR (PNG)
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button onClick={downloadPng} disabled={!ready} className="btn-outline">
+          ↓ PNG
+        </button>
+        <button
+          onClick={downloadPdf}
+          disabled={!ready || makingPdf}
+          className="btn-outline"
+        >
+          {makingPdf ? "Preparing…" : "↓ PDF"}
+        </button>
+      </div>
     </div>
   );
 }
