@@ -17,6 +17,8 @@ const updateSchema = z.object({
   codesEnabled: z.boolean().optional(),
   confirmationTitle: z.string().max(120).nullable().optional(),
   confirmationMessage: z.string().max(500).nullable().optional(),
+  registerButtonText: z.string().max(60).nullable().optional(),
+  registerButtonNote: z.string().max(200).nullable().optional(),
   maxRedemptions: z.number().int().min(0).max(100000).optional(),
   themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
@@ -28,6 +30,7 @@ const updateSchema = z.object({
   radiusMeters: z.number().int().min(10).max(50000).optional(),
   locationLabel: z.string().max(200).nullable().optional(),
   smsEnabled: z.boolean().optional(),
+  smsTemplate: z.string().max(320).nullable().optional(),
   secureCheckin: z.boolean().optional(),
 });
 

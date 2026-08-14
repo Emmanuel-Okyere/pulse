@@ -55,6 +55,8 @@ export default async function EditEventPage({
     codesEnabled: event.codesEnabled,
     confirmationTitle: event.confirmationTitle ?? "",
     confirmationMessage: event.confirmationMessage ?? "",
+    registerButtonText: event.registerButtonText ?? "",
+    registerButtonNote: event.registerButtonNote ?? "",
     maxRedemptions: event.maxRedemptions,
     themePrimary: event.themePrimary ?? "",
     themeAccent: event.themeAccent ?? "",
@@ -66,6 +68,7 @@ export default async function EditEventPage({
     radiusMeters: event.radiusMeters,
     locationLabel: event.locationLabel ?? "",
     smsEnabled: event.smsEnabled,
+    smsTemplate: event.smsTemplate ?? "",
     secureCheckin: event.secureCheckin,
   };
 

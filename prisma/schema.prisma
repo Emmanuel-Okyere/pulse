@@ -56,6 +56,11 @@ model Event {
   confirmationTitle   String?
   confirmationMessage String?
 
+  // Public "Register" button label and the fine print shown beneath it. Null
+  // falls back to the built-in wording.
+  registerButtonText String?
+  registerButtonNote String?
+
   // How many times a single code may be redeemed. 1 = single use (default),
   // 0 = unlimited, any other N = up to N times.
   maxRedemptions Int @default(1)
@@ -80,6 +85,10 @@ model Event {
 
   // Send the registration code to the attendee by SMS (GiantSMS) when possible.
   smsEnabled Boolean @default(false)
+
+  // Organizer-authored SMS body. Supports {code}, {event}, {name}, {venue} and
+  // {date} placeholders. Null uses the built-in message.
+  smsTemplate String?
 
   // Secure check-in: registration requires a short-lived signed token from the
   // live entrance display, so a screenshotted or forwarded QR cannot be reused.

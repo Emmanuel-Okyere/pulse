@@ -17,6 +17,8 @@ const createSchema = z.object({
   codesEnabled: z.boolean().default(true),
   confirmationTitle: z.string().max(120).nullable().optional(),
   confirmationMessage: z.string().max(500).nullable().optional(),
+  registerButtonText: z.string().max(60).nullable().optional(),
+  registerButtonNote: z.string().max(200).nullable().optional(),
   maxRedemptions: z.number().int().min(0).max(100000).default(1),
   themePrimary: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   themeAccent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
@@ -28,6 +30,7 @@ const createSchema = z.object({
   radiusMeters: z.number().int().min(10).max(50000).default(200),
   locationLabel: z.string().max(200).nullable().optional(),
   smsEnabled: z.boolean().default(false),
+  smsTemplate: z.string().max(320).nullable().optional(),
   secureCheckin: z.boolean().default(false),
 });
 
@@ -83,6 +86,8 @@ export async function POST(req: Request) {
         codesEnabled: body.codesEnabled,
         confirmationTitle: body.confirmationTitle,
         confirmationMessage: body.confirmationMessage,
+        registerButtonText: body.registerButtonText,
+        registerButtonNote: body.registerButtonNote,
         maxRedemptions: body.maxRedemptions,
         themePrimary: body.themePrimary,
         themeAccent: body.themeAccent,
@@ -94,6 +99,7 @@ export async function POST(req: Request) {
         radiusMeters: body.radiusMeters,
         locationLabel: body.locationLabel,
         smsEnabled: body.smsEnabled,
+        smsTemplate: body.smsTemplate,
         secureCheckin: body.secureCheckin,
         organizerId: user.id,
       },

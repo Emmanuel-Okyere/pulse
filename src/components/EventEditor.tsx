@@ -29,6 +29,8 @@ export type EventEditorInitial = {
   codesEnabled: boolean;
   confirmationTitle: string;
   confirmationMessage: string;
+  registerButtonText: string;
+  registerButtonNote: string;
   maxRedemptions: number; // 1 single use, 0 unlimited, N up to N
   themePrimary: string; // "" = use default
   themeAccent: string; // "" = use default
@@ -40,8 +42,14 @@ export type EventEditorInitial = {
   radiusMeters: number;
   locationLabel: string;
   smsEnabled: boolean;
+  smsTemplate: string;
   secureCheckin: boolean;
 };
+
+// Shown to the organizer as the default wording for the public register button.
+export const DEFAULT_BUTTON_TEXT = "Register my attendance";
+export const DEFAULT_BUTTON_NOTE =
+  "By registering you confirm your presence at this event.";
 
 const rid = () => Math.random().toString(36).slice(2, 9);
 
@@ -64,6 +72,8 @@ export function emptyInitial(): EventEditorInitial {
     codesEnabled: true,
     confirmationTitle: "",
     confirmationMessage: "",
+    registerButtonText: "",
+    registerButtonNote: "",
     maxRedemptions: 1,
     themePrimary: "",
     themeAccent: "",
@@ -75,6 +85,7 @@ export function emptyInitial(): EventEditorInitial {
     radiusMeters: 200,
     locationLabel: "",
     smsEnabled: false,
+    smsTemplate: "",
     secureCheckin: false,
   };
 }
@@ -107,6 +118,8 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
   const [codesEnabled, setCodesEnabled] = useState(seed.codesEnabled);
   const [confirmationTitle, setConfirmationTitle] = useState(seed.confirmationTitle);
   const [confirmationMessage, setConfirmationMessage] = useState(seed.confirmationMessage);
+  const [registerButtonText, setRegisterButtonText] = useState(seed.registerButtonText);
+  const [registerButtonNote, setRegisterButtonNote] = useState(seed.registerButtonNote);
   const [redeemUnlimited, setRedeemUnlimited] = useState(seed.maxRedemptions === 0);
   const [redeemTimes, setRedeemTimes] = useState(
     seed.maxRedemptions === 0 ? 1 : seed.maxRedemptions
@@ -116,6 +129,7 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
   const [themePrimary, setThemePrimary] = useState(seed.themePrimary || DEFAULT_PRIMARY);
   const [themeAccent, setThemeAccent] = useState(seed.themeAccent || DEFAULT_ACCENT);
   const [smsEnabled, setSmsEnabled] = useState(seed.smsEnabled);
+  const [smsTemplate, setSmsTemplate] = useState(seed.smsTemplate);
   const [requireLocation, setRequireLocation] = useState(seed.requireLocation);
   const [enforceLocation, setEnforceLocation] = useState(seed.enforceLocation);
   const [latStr, setLatStr] = useState(seed.latitude?.toString() ?? "");
@@ -245,12 +259,15 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
       // null (not undefined) so editing can clear a previously set message.
       confirmationTitle: confirmationTitle.trim() || null,
       confirmationMessage: confirmationMessage.trim() || null,
+      registerButtonText: registerButtonText.trim() || null,
+      registerButtonNote: registerButtonNote.trim() || null,
       maxRedemptions: redeemUnlimited ? 0 : Math.max(1, redeemTimes),
       embedLogoInQr,
       // null → the public page falls back to the built-in Kinetic Pulse theme.
       themePrimary: customColors ? themePrimary : null,
       themeAccent: customColors ? themeAccent : null,
       smsEnabled,
+      smsTemplate: smsTemplate.trim() || null,
       requireLocation,
       enforceLocation: requireLocation && enforceLocation,
       latitude: latStr.trim() ? Number(latStr) : null,
@@ -649,6 +666,32 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
             </p>
           </div>
 
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">Register button label</label>
+              <input
+                className="input mt-1.5"
+                value={registerButtonText}
+                onChange={(e) => setRegisterButtonText(e.target.value)}
+                maxLength={60}
+                placeholder={DEFAULT_BUTTON_TEXT}
+              />
+            </div>
+            <div>
+              <label className="label">Note beneath the button</label>
+              <input
+                className="input mt-1.5"
+                value={registerButtonNote}
+                onChange={(e) => setRegisterButtonNote(e.target.value)}
+                maxLength={200}
+                placeholder={DEFAULT_BUTTON_NOTE}
+              />
+            </div>
+          </div>
+          <p className="mt-1.5 text-xs text-ink-muted">
+            Leave blank to keep the default wording shown in grey.
+          </p>
+
           {codesEnabled && (
             <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-neutralbg p-4">
               <input
@@ -667,6 +710,42 @@ export function EventEditor({ initial }: { initial?: EventEditorInitial }) {
                 </span>
               </span>
             </label>
+          )}
+
+          {codesEnabled && smsEnabled && (
+            <div className="mt-4">
+              <label className="label">Message the attendee receives</label>
+              <textarea
+                className="input mt-1.5 min-h-24 font-mono text-sm"
+                value={smsTemplate}
+                onChange={(e) => setSmsTemplate(e.target.value)}
+                maxLength={320}
+                placeholder={
+                  "Hi {name}, you're in for {event}! Your code is {code}. Show it at {venue} on {date}."
+                }
+              />
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {(["code", "event", "name", "venue", "date"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSmsTemplate((m) => `${m}{${t}}`)}
+                    className="chip bg-neutralbg font-mono text-xs text-ink-muted hover:text-primary"
+                  >
+                    {`{${t}}`}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-ink-muted">
+                Tap a tag to insert it. Leave blank to send the default:{" "}
+                <span className="text-ink">
+                  “Pulse: you’re registered for {"{event}"}. Your code is{" "}
+                  {"{code}"}…”
+                </span>{" "}
+                A blank tag (no value for that attendee) simply disappears. Keep
+                it under about 160 characters to fit one SMS.
+              </p>
+            </div>
           )}
         </section>
 

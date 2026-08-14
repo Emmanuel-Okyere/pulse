@@ -88,6 +88,8 @@ export default async function PublicEventPage({
             requireLocation={event.requireLocation}
             enforceLocation={event.enforceLocation}
             locationLabel={event.locationLabel}
+            buttonText={event.registerButtonText}
+            buttonNote={event.registerButtonNote}
             checkinToken={token}
           />
         )}

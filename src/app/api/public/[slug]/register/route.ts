@@ -5,7 +5,7 @@ import { handle } from "@/lib/http";
 import { HttpError } from "@/lib/guards";
 import { generateRegistrationCode } from "@/lib/codes";
 import { haversineMeters, withinGeofence } from "@/lib/geo";
-import { sendSms, toGhanaMsisdn, registrationMessage } from "@/lib/sms";
+import { sendSms, toGhanaMsisdn, composeSms } from "@/lib/sms";
 import { verifyCheckinToken } from "@/lib/checkin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { formSchemaArray, validateSubmission, type FormField } from "@/lib/formSchema";
@@ -116,10 +116,20 @@ export async function POST(req: Request, { params }: Params) {
     if (event.smsEnabled && code) {
       const phone = firstPhone(fields, result.data);
       if (phone) {
-        const res = await sendSms(
-          toGhanaMsisdn(phone),
-          registrationMessage(event.title, code)
-        );
+        const message = composeSms(event.smsTemplate, {
+          code,
+          event: event.title,
+          name: firstName(fields, result.data),
+          venue: event.locationLabel || event.venue,
+          date: event.startsAt
+            ? event.startsAt.toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : null,
+        });
+        const res = await sendSms(toGhanaMsisdn(phone), message);
         smsSent = res.ok;
       }
     }
@@ -143,4 +153,19 @@ function firstPhone(fields: FormField[], data: Record<string, string>): string |
   if (!field) return null;
   const v = data[field.key];
   return v ? v : null;
+}
+
+// A friendly first name for the {name} SMS token. Prefer a field that looks
+// like a name (key or label contains "name"), else the first text field, and
+// use just the given name so the message stays personal and short.
+function firstName(fields: FormField[], data: Record<string, string>): string | null {
+  const named =
+    fields.find(
+      (f) =>
+        f.type === "text" &&
+        /name/i.test(`${f.key} ${f.label}`) &&
+        !/user|company|last|sur/i.test(`${f.key} ${f.label}`)
+    ) ?? fields.find((f) => f.type === "text");
+  const full = named ? data[named.key] : "";
+  return full ? full.trim().split(/\s+/)[0] : null;
 }

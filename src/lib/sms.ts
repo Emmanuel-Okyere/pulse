@@ -54,3 +54,49 @@ export function registrationMessage(
 ): string {
   return `Pulse: you're registered for ${eventTitle}. Your code is ${code}. Keep it to redeem your benefit.`;
 }
+
+// The placeholders an organizer may use in a custom SMS body.
+export type SmsVars = {
+  code: string;
+  event: string;
+  name?: string | null;
+  venue?: string | null;
+  date?: string | null;
+};
+
+// The tokens shown in the editor hint and accepted by renderSmsTemplate.
+export const SMS_TOKENS = ["code", "event", "name", "venue", "date"] as const;
+
+// Substitute {code}, {event}, {name}, {venue} and {date} in an organizer's
+// message. Matching is case-insensitive and tolerant of inner spacing, so
+// "{ Code }" resolves too. Unknown tokens are left as-is so a stray brace in
+// the copy is never silently swallowed; a known token with no value collapses
+// to an empty string, and the surrounding whitespace is tidied afterwards.
+export function renderSmsTemplate(template: string, vars: SmsVars): string {
+  const map: Record<string, string> = {
+    code: vars.code,
+    event: vars.event,
+    name: (vars.name ?? "").trim(),
+    venue: (vars.venue ?? "").trim(),
+    date: (vars.date ?? "").trim(),
+  };
+  const out = template.replace(/\{\s*([a-zA-Z]+)\s*\}/g, (whole, raw: string) => {
+    const key = raw.toLowerCase();
+    return key in map ? map[key] : whole;
+  });
+  // Collapse the runs of spaces a blank token can leave behind, and trim.
+  return out.replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?])/g, "$1").trim();
+}
+
+// Resolve the message to send: the organizer's template when set, else the
+// default. Falls back to the default if a template renders to nothing.
+export function composeSms(
+  template: string | null | undefined,
+  vars: SmsVars
+): string {
+  if (template && template.trim()) {
+    const rendered = renderSmsTemplate(template, vars);
+    if (rendered) return rendered;
+  }
+  return registrationMessage(vars.event, vars.code);
+}

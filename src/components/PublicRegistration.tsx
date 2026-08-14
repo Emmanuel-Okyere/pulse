@@ -19,6 +19,8 @@ type Props = {
   requireLocation: boolean;
   enforceLocation: boolean;
   locationLabel: string | null;
+  buttonText: string | null;
+  buttonNote: string | null;
   checkinToken: string | null;
 };
 
@@ -68,6 +70,8 @@ export function PublicRegistration(props: Props) {
     requireLocation,
     enforceLocation,
     locationLabel,
+    buttonText,
+    buttonNote,
     checkinToken,
   } = props;
 
@@ -78,13 +82,19 @@ export function PublicRegistration(props: Props) {
   const primary = themePrimary || "#5D3FD3";
   const accent = themeAccent || "#00F5FF";
   const st = {
+    // A slim accent cap on the card, so the accent shows even on events with
+    // no benefits or code.
+    card: custom ? { borderTop: `4px solid ${accent}` } : undefined,
     solid: custom ? { backgroundColor: primary } : undefined,
+    // The code box is framed in the accent and filled with a tint of it, so the
+    // attendee's code sits inside the secondary colour rather than the primary.
     codeBox: custom
-      ? { backgroundColor: `${primary}14`, borderColor: `${primary}59`, color: primary }
+      ? { backgroundColor: `${accent}1F`, borderColor: accent, color: primary }
       : undefined,
     avatar: custom ? { backgroundColor: `${primary}14`, color: primary } : undefined,
     chip: custom ? { backgroundColor: `${accent}26`, color: primary } : undefined,
-    bullet: custom ? { color: primary } : undefined,
+    // The benefit diamond takes the accent colour (as it does by default).
+    bullet: custom ? { color: accent } : undefined,
   };
 
   const [values, setValues] = useState<Record<string, string>>({});
@@ -161,7 +171,7 @@ export function PublicRegistration(props: Props) {
         : "Thanks — your attendance has been recorded.");
 
     return (
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden" style={st.card}>
         <div
           className={`px-6 py-8 text-center text-white${custom ? "" : " bg-primary"}`}
           style={st.solid}
@@ -243,7 +253,7 @@ export function PublicRegistration(props: Props) {
   }
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-hidden" style={st.card}>
       {/* Event header */}
       <div className="border-b border-[var(--border)] p-6">
         <div className="flex items-center gap-4">
@@ -328,10 +338,10 @@ export function PublicRegistration(props: Props) {
             ? "Checking your location…"
             : busy
               ? "Registering…"
-              : "Register my attendance"}
+              : buttonText?.trim() || "Register my attendance"}
         </button>
         <p className="text-center text-xs text-ink-muted">
-          By registering you confirm your presence at this event.
+          {buttonNote?.trim() || "By registering you confirm your presence at this event."}
         </p>
       </form>
     </div>

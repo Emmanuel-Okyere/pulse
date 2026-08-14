@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { haversineMeters, withinGeofence, isValidLatLng } from "@/lib/geo";
-import { toGhanaMsisdn, registrationMessage } from "@/lib/sms";
+import {
+  toGhanaMsisdn,
+  registrationMessage,
+  renderSmsTemplate,
+  composeSms,
+} from "@/lib/sms";
 
 describe("haversineMeters", () => {
   it("is zero for the same point", () => {
@@ -61,5 +66,54 @@ describe("registrationMessage", () => {
     const msg = registrationMessage("Founders Mixer", "PLS-7KQ4-M9TX");
     expect(msg).toContain("Founders Mixer");
     expect(msg).toContain("PLS-7KQ4-M9TX");
+  });
+});
+
+describe("renderSmsTemplate", () => {
+  const vars = {
+    code: "PLS-7KQ4-M9TX",
+    event: "Founders Mixer",
+    name: "Ama",
+    venue: "Accra Digital Centre",
+    date: "20 Aug 2026",
+  };
+
+  it("substitutes every placeholder, wherever the organizer put it", () => {
+    const msg = renderSmsTemplate(
+      "Hi {name}, your {event} code is {code}. See you at {venue} on {date}.",
+      vars
+    );
+    expect(msg).toBe(
+      "Hi Ama, your Founders Mixer code is PLS-7KQ4-M9TX. See you at Accra Digital Centre on 20 Aug 2026."
+    );
+  });
+
+  it("matches tokens case-insensitively and ignores inner spacing", () => {
+    expect(renderSmsTemplate("Code: { CODE }", vars)).toBe("Code: PLS-7KQ4-M9TX");
+  });
+
+  it("drops a token that has no value and tidies the spacing", () => {
+    const msg = renderSmsTemplate("Hi {name}, code {code}.", {
+      ...vars,
+      name: null,
+    });
+    expect(msg).toBe("Hi, code PLS-7KQ4-M9TX.");
+  });
+
+  it("leaves an unknown token untouched", () => {
+    expect(renderSmsTemplate("Ref {order}", vars)).toBe("Ref {order}");
+  });
+});
+
+describe("composeSms", () => {
+  const vars = { code: "PLS-7KQ4-M9TX", event: "Founders Mixer" };
+
+  it("uses the organizer template when one is set", () => {
+    expect(composeSms("Your code {code}", vars)).toBe("Your code PLS-7KQ4-M9TX");
+  });
+
+  it("falls back to the default when the template is blank", () => {
+    expect(composeSms("   ", vars)).toBe(registrationMessage(vars.event, vars.code));
+    expect(composeSms(null, vars)).toBe(registrationMessage(vars.event, vars.code));
   });
 });
